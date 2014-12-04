@@ -1,17 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <s:Application xmlns:fx="http://ns.adobe.com/mxml/2009" 
 			   xmlns:s="library://ns.adobe.com/flex/spark" 
-			   xmlns:mx="library://ns.adobe.com/flex/mx" applicationComplete="init()">
+			   xmlns:mx="library://ns.adobe.com/flex/mx" applicationComplete="init()"
+			   minWidth="900" minHeight="600"
+			   width="900" height="600"
+			   >
 	<fx:Declarations>
 		<!-- Place non-visual elements (e.g., services, value objects) here -->
 	</fx:Declarations>
 	
 	<fx:Script>
 		<![CDATA[
-			//private const SERVER:String = "rtmfp://stratus.adobe.com/";
-			//private const DEVKEY:String = "481a9df7fad7b1a57b57ae7b-cf264f9fd8e6";
-			private const SERVER:String = "rtmfp:";
-			private const DEVKEY:String = "";
+			import mx.core.UIComponent;
+			import spark.components.Group;
+			
+			
+			private const SERVER:String = "rtmfp://stratus.adobe.com/";
+			private const DEVKEY:String = "481a9df7fad7b1a57b57ae7b-cf264f9fd8e6";
+			//private const SERVER:String = "rtmfp:";
+			//private const DEVKEY:String = "";
 			
 			
 			[Bindable]
@@ -20,11 +27,26 @@
 			[Bindable]
 			private var connected:Boolean = false;
 			
+			[Bindable]
+			private var vidBut:String = "Start"
+			
+			private var video:Video;
+			
 			private var netConnection:NetConnection;
 			private var netGroup:NetGroup;
+			private var stream:NetStream;
+			
+			[Bindable]
+			private var vidState:String;
 			
 			private function init():void{
+				
+				video = new Video(656,496);
+				video.x = 1;
+				video.y = 1;
+				
 				userName = "user"+Math.round(Math.random()*1000);
+				vidState = "Closed";
 				connect();
 			}
 			
@@ -40,6 +62,7 @@
 				switch(event.info.code){
 					case "NetConnection.Connect.Success":
 						setupGroup();
+						connected = true;
 						break;
 					case "NetGroup.Posting.Notify":
 						receiveMessage(event.info.message);
@@ -51,8 +74,12 @@
 				}
 			}
 			
+			private function vidStatue(event:NetStatusEvent):void{
+				writeText(event.info.code);
+			}
+			
 			private function setupGroup():void{
-				var spec:GroupSpecifier = new GroupSpecifier("MyGroup/g0");
+				var spec:GroupSpecifier = new GroupSpecifier("Group_Chat");
 				spec.multicastEnabled = true;
 				spec.ipMulticastMemberUpdatesEnabled = true;
 				spec.objectReplicationEnabled = true;
@@ -60,7 +87,7 @@
 				spec.postingEnabled = true;
 				spec.serverChannelEnabled = true;
 				
-				spec.addIPMulticastAddress("239.252.252.1:20000");
+				//spec.addIPMulticastAddress("239.252.252.1:20000");
 				
 				netGroup = new NetGroup(netConnection, spec.groupspecWithAuthorizations());
 				netGroup.addEventListener(NetStatusEvent.NET_STATUS, netStatus);
@@ -69,16 +96,34 @@
 			
 			private function sendMessage(txt:String):void{
 				var message:Object = new Object();
+				message.type = "CHAT";
 				message.text = txt;
 				message.userName = txtUser.text;
 				message.sender = netGroup.convertPeerIDToGroupAddress(netConnection.nearID);
+				message.time = new Date().time;
 				
 				netGroup.post(message);
 				receiveMessage(message);
 			}
 			
 			private function receiveMessage(message:Object):void{
-				writeText(message.userName+": "+message.text);
+				if(message.type=="CHAT"){
+					writeText(message.userName+": "+message.text);
+				}
+				else if(message.type=="TAKE_V" && vidState == "Closed"){
+					vidState = "Ready";
+					vidBut = "Watch";
+				}
+				else if(message.type=="RELE_V"){
+					if(vidState == "Closed"){
+						vidBut = "Start";
+					}
+					if(vidState == "Watching"){
+						setupStream();
+						vidState = "Closed";
+						vidBut = "Start";
+					}
+				}
 			}
 			
 			private function writeText(txt:String):void{
@@ -89,11 +134,106 @@
 				sendMessage(txtMessage.text);
 			}
 			
+			private function takeVideo():void{
+				var message:Object = new Object();
+				message.type = "TAKE_V";
+				message.time = new Date().time;
+				netGroup.post(message);
+				vidState = "Streaming";
+			}
+			
+			private function releaseVideo():void{
+				var message:Object = new Object();
+				message.type = "RELE_V";
+				message.time = new Date().time;
+				netGroup.post(message);
+				vidState = "Closed";
+			}
+			
+			private function setupStream():void{
+				
+				var uic:UIComponent = new UIComponent();
+				uic.addChild(video);
+				vid1.addElement(uic);
+				
+				if(vidState == "Closed"){
+					
+					video.visible = true;
+					
+					takeVideo();
+					vidBut = "Stop Speech";
+					
+					var groupspec:GroupSpecifier = new GroupSpecifier("GroupV");
+					groupspec.serverChannelEnabled = true;
+					groupspec.multicastEnabled = true;
+				
+					stream = new NetStream(netConnection,groupspec.groupspecWithAuthorizations());
+					stream.addEventListener(NetStatusEvent.NET_STATUS, netStatus);
+				
+					var cam:Camera = Camera.getCamera();
+					cam.setQuality(0, 80);
+					cam.setMode(533, 400, 20);
+				
+					stream.attachCamera(cam);
+					stream.publish("multicast");
+				
+					video.attachCamera(cam);
+				}
+				else if(vidState == "Ready"){
+					
+					video.visible = true;
+					
+					vidState = "Watching";
+					vidBut = "Stop Watching";
+					
+					var groupspec:GroupSpecifier = new GroupSpecifier("GroupV");
+					groupspec.serverChannelEnabled = true;
+					groupspec.multicastEnabled = true;
+					
+					stream = new NetStream(netConnection,groupspec.groupspecWithAuthorizations());
+					stream.addEventListener(NetStatusEvent.NET_STATUS, netStatus);
+					
+					stream.play("multicast");
+					
+					video.attachNetStream(stream);
+				}
+				else if(vidState == "Streaming"){
+					releaseVideo();
+					vidState = "Closed";
+					vidBut = "Start";
+					stream.close();
+					video.attachNetStream(null);
+					video.clear();
+					video.visible = false;
+				}
+				else if(vidState == "Watching"){
+					vidState = "Ready";
+					vidBut = "Watch";
+					stream.close();
+					video.clear();
+				}
+			}
+			
 		]]>
 	</fx:Script>
 	
-	<s:TextInput text="{userName}" x="10" bottom="10" id="txtUser"/>
-	<s:TextInput left="146" right="88" bottom="10" id="txtMessage" enter="sendNow()"/>
-	<s:TextArea left="10" right="10" top="10" bottom="40" id="txtHistory"/>
-	<s:Button enabled="{connected}" label="Send" bottom="10" right="10" click="sendNow()"/>
+	<mx:TabNavigator x="0" y="0" width="900" height="600">
+		<s:NavigatorContent width="100%" height="100%" label="Chat">
+			<s:TextArea id="txtHistory" x="10" y="0" width="878" height="527"/>
+			<s:TextInput id="txtUser" x="10" y="535" text="{userName}"/>
+			<s:TextInput id="txtMessage" x="146" y="535" width="664" enter="sendNow()"/>
+			<s:Button x="818" y="535" label="Send" click="sendNow()" enabled="{connected}"/>
+		</s:NavigatorContent>
+		<s:NavigatorContent width="100%" height="100%" label="Video">
+			<s:Button x="18" y="12" width="99" height="30" label="{vidBut}" click="setupStream()"
+					  enabled="{connected}"/>
+			<s:BorderContainer x="140" y="9" width="700" height="540" backgroundColor="#B1B1B1">
+				<s:BorderContainer id="vid1" x="20" y="20" width="660" height="500">
+				</s:BorderContainer>
+			</s:BorderContainer>
+			<s:Label x="18" y="60" text="{vidState}"/>
+		</s:NavigatorContent>
+		<s:NavigatorContent width="100%" height="100%" label="Voting">
+		</s:NavigatorContent>
+	</mx:TabNavigator>
 </s:Application>
