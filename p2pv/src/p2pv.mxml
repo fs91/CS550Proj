@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx" applicationComplete="init()">
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	
+	<fx:Script>
+		<![CDATA[
+			//private const SERVER:String = "rtmfp://stratus.adobe.com/";
+			//private const DEVKEY:String = "481a9df7fad7b1a57b57ae7b-cf264f9fd8e6";
+			private const SERVER:String = "rtmfp:";
+			private const DEVKEY:String = "";
+			
+			
+			[Bindable]
+			private var userName:String;
+			
+			[Bindable]
+			private var connected:Boolean = false;
+			
+			private var netConnection:NetConnection;
+			private var netGroup:NetGroup;
+			
+			private function init():void{
+				userName = "user"+Math.round(Math.random()*1000);
+				connect();
+			}
+			
+			private function connect():void{
+				netConnection = new NetConnection();
+				netConnection.addEventListener(NetStatusEvent.NET_STATUS, netStatus);
+				netConnection.connect(SERVER+DEVKEY);
+			}
+			
+			private function netStatus(event:NetStatusEvent):void{
+				writeText(event.info.code);
+				
+				switch(event.info.code){
+					case "NetConnection.Connect.Success":
+						setupGroup();
+						break;
+					case "NetGroup.Posting.Notify":
+						receiveMessage(event.info.message);
+						break;
+					case "NetGroup.Connect.Success":
+						connected = true;
+						break;
+					
+				}
+			}
+			
+			private function setupGroup():void{
+				var spec:GroupSpecifier = new GroupSpecifier("MyGroup/g0");
+				spec.multicastEnabled = true;
+				spec.ipMulticastMemberUpdatesEnabled = true;
+				spec.objectReplicationEnabled = true;
+				spec.routingEnabled = true;
+				spec.postingEnabled = true;
+				spec.serverChannelEnabled = true;
+				
+				spec.addIPMulticastAddress("239.252.252.1:20000");
+				
+				netGroup = new NetGroup(netConnection, spec.groupspecWithAuthorizations());
+				netGroup.addEventListener(NetStatusEvent.NET_STATUS, netStatus);
+				
+			}
+			
+			private function sendMessage(txt:String):void{
+				var message:Object = new Object();
+				message.text = txt;
+				message.userName = txtUser.text;
+				message.sender = netGroup.convertPeerIDToGroupAddress(netConnection.nearID);
+				
+				netGroup.post(message);
+				receiveMessage(message);
+			}
+			
+			private function receiveMessage(message:Object):void{
+				writeText(message.userName+": "+message.text);
+			}
+			
+			private function writeText(txt:String):void{
+				txtHistory.text += txt+"\n";
+			}
+			
+			private function sendNow():void{
+				sendMessage(txtMessage.text);
+			}
+			
+		]]>
+	</fx:Script>
+	
+	<s:TextInput text="{userName}" x="10" bottom="10" id="txtUser"/>
+	<s:TextInput left="146" right="88" bottom="10" id="txtMessage" enter="sendNow()"/>
+	<s:TextArea left="10" right="10" top="10" bottom="40" id="txtHistory"/>
+	<s:Button enabled="{connected}" label="Send" bottom="10" right="10" click="sendNow()"/>
+</s:Application>
