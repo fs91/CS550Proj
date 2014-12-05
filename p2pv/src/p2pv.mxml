@@ -341,6 +341,7 @@
 					var message:Object = new Object();
 					message.type = "VOTE_R";
 					message.select = radiogroup2.selectedValue;
+					message.time = new Date().time;
 					netGroup.post(message);
 					receiveMessage(message);
 					votbutenb = false;
@@ -376,6 +377,7 @@
 					message.ans3sta = ansta3;
 					message.ans4sta = ansta4;
 					message.ans5sta = ansta5;
+					message.time = new Date().time;
 					netGroup.post(message);
 					receiveMessage(message);
 					manager = false;
