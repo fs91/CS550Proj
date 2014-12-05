@@ -6,12 +6,14 @@
 			   width="900" height="600"
 			   >
 	<fx:Declarations>
+		<s:RadioButtonGroup id="radiogroup2"/>
 		<!-- Place non-visual elements (e.g., services, value objects) here -->
 	</fx:Declarations>
 	
 	<fx:Script>
 		<![CDATA[
 			import mx.core.UIComponent;
+			
 			import spark.components.Group;
 			
 			
@@ -31,13 +33,36 @@
 			private var vidBut:String = "Start"
 			
 			private var video:Video;
+			private var manager:Boolean = false;
 			
 			private var netConnection:NetConnection;
 			private var netGroup:NetGroup;
 			private var stream:NetStream;
 			
 			[Bindable]
+			private var ansta1:int = 0;
+			
+			[Bindable]
+			private var ansta2:int = 0;
+			
+			[Bindable]
+			private var ansta3:int = 0;
+			
+			[Bindable]
+			private var ansta4:int = 0;
+			
+			[Bindable]
+			private var ansta5:int = 0;
+			
+			[Bindable]
 			private var vidState:String;
+			
+			private var votState:String;
+			
+			[Bindable]
+			private var timerdec:int = 10;
+			
+			private var timer:Timer;
 			
 			private function init():void{
 				
@@ -45,8 +70,12 @@
 				video.x = 1;
 				video.y = 1;
 				
+				timer = new Timer(1000);
+				timer.addEventListener(TimerEvent.TIMER, onTimer);
 				userName = "user"+Math.round(Math.random()*1000);
 				vidState = "Closed";
+				votState = "Wait";
+				
 				connect();
 			}
 			
@@ -57,18 +86,22 @@
 			}
 			
 			private function netStatus(event:NetStatusEvent):void{
-				writeText(event.info.code);
+				//writeText(event.info.code);
 				
 				switch(event.info.code){
 					case "NetConnection.Connect.Success":
 						setupGroup();
 						connected = true;
+						writeText("Connection Stabled");
 						break;
 					case "NetGroup.Posting.Notify":
 						receiveMessage(event.info.message);
 						break;
 					case "NetGroup.Connect.Success":
 						connected = true;
+						break;
+					case "NetGroup.Neighbor.Connect":
+						writeText("Peer Connected");
 						break;
 					
 				}
@@ -122,6 +155,63 @@
 						setupStream();
 						vidState = "Closed";
 						vidBut = "Start";
+					}
+				}
+				else if(message.type=="VOTE_Q"){
+					if(votState == "Wait"){
+						quesV.text = message.ques;
+						btans1.label = message.ans1;
+						btans2.label = message.ans2;
+						btans3.label = message.ans3;
+						btans4.label = message.ans4;
+						btans5.label = message.ans5;
+						votState = "Voting";
+						newVote.visible = true;
+						result.visible = false;
+						incVote.visible = false;
+						votbut.enabled = true;
+						timerdec = 10;
+						timer.start();
+					}
+				}
+				else if(message.type=="VOTE_R"){
+					if(votState == "Voting" && manager){
+						if(message.select == ans1.text){
+							ansta1++;
+						}
+						if(message.select == ans2.text){
+							ansta2++;
+						}
+						if(message.select == ans3.text){
+							ansta3++;
+						}
+						if(message.select == ans4.text){
+							ansta4++;
+						}
+						if(message.select == ans5.text){
+							ansta5++;
+						}
+					}
+				}
+				else if(message.type=="VOTE_FINAL"){
+					if(votState == "Voting"){
+						votState = "Wait";
+						radiogroup2.selection = null;
+						timerdec = 0;
+						queR.text = message.ques;
+						ansS1.text = message.ans1;
+						ansS2.text = message.ans2;
+						ansS3.text = message.ans3;
+						ansS4.text = message.ans4;
+						ansS5.text = message.ans5;
+						ansR1.text = message.ans1sta;
+						ansR2.text = message.ans2sta;
+						ansR3.text = message.ans3sta;
+						ansR4.text = message.ans4sta;
+						ansR5.text = message.ans5sta;
+						newVote.visible = false;
+						result.visible = true;
+						incVote.visible = false;
 					}
 				}
 			}
@@ -214,6 +304,87 @@
 				}
 			}
 			
+			private function init_vote():void{
+				if(votState=="Wait"){
+					manager = true;
+					var message:Object = new Object();
+					message.type = "VOTE_Q";
+					message.ques = ques.text;
+					message.ans1 = ans1.text;
+					message.ans2 = ans2.text;
+					message.ans3 = ans3.text;
+					message.ans4 = ans4.text;
+					message.ans5 = ans5.text;
+					message.time = new Date().time;
+				
+					netGroup.post(message);
+					receiveMessage(message);
+				}
+			}
+			
+			private function send_vote():void{
+				if(votState=="Voting"){
+					var message:Object = new Object();
+					message.type = "VOTE_R";
+					message.select = radiogroup2.selectedValue;
+					netGroup.post(message);
+					receiveMessage(message);
+					votbut.enabled = false;
+				}
+			}
+			
+			private function onTimer(e:TimerEvent):void 
+			{
+				if(timerdec>0){
+					timerdec--;
+				}
+				else {
+					votbut.enabled = false;
+				}
+				if(timerdec<=0 && manager){
+					pubVoteResult();
+				}
+			}
+			
+			private function pubVoteResult():void
+			{
+				if(votState=="Voting"){
+					var message:Object = new Object();
+					message.type = "VOTE_FINAL";
+					message.ques = ques.text;
+					message.ans1 = ans1.text;
+					message.ans2 = ans2.text;
+					message.ans3 = ans3.text;
+					message.ans4 = ans4.text;
+					message.ans5 = ans5.text;
+					message.ans1sta = ansta1;
+					message.ans2sta = ansta2;
+					message.ans3sta = ansta3;
+					message.ans4sta = ansta4;
+					message.ans5sta = ansta5;
+					netGroup.post(message);
+					receiveMessage(message);
+					manager = false;
+				}
+			}
+			
+			private function resetVote():void{
+				ques.text = "Type your question or description here";
+				ans1.text = "Type selection 1";
+				ans2.text = "Type selection 2";
+				ans3.text = "Type selection 3";
+				ans4.text = "Type selection 4";
+				ans5.text = "Type selection 5";
+				ansta1 = 0;
+				ansta2 = 0;
+				ansta3 = 0;
+				ansta4 = 0;
+				ansta5 = 0;
+				newVote.visible = false;
+				result.visible = false;
+				incVote.visible = true;
+			}
+			
 		]]>
 	</fx:Script>
 	
@@ -234,6 +405,42 @@
 			<s:Label x="18" y="60" text="{vidState}"/>
 		</s:NavigatorContent>
 		<s:NavigatorContent width="100%" height="100%" label="Voting">
+			<s:BorderContainer id="newVote" x="150" y="100" width="600" height="300" visible="false">
+				<s:VGroup x="238" y="92" width="122" height="115">
+					<s:RadioButton id="btans1" label="Button 1" groupName="radiogroup2"/>
+					<s:RadioButton id="btans2" label="Button 2" groupName="radiogroup2"/>
+					<s:RadioButton id="btans3" label="Button 3" groupName="radiogroup2"/>
+					<s:RadioButton id="btans4" label="Button 4" groupName="radiogroup2"/>
+					<s:RadioButton id="btans5" label="Button 5" groupName="radiogroup2"/>
+				</s:VGroup>
+				<s:Label id="quesV" x="169" y="44" width="260" height="36" fontSize="14" text="Label"/>
+				<s:Button id="votbut" x="264" y="243" label="Vote" click="send_vote()"/>
+				<s:Label id="timerdisp" x="557" y="10" fontSize="20" text="{timerdec}"/>
+			</s:BorderContainer>
+			<s:BorderContainer id="incVote" x="150" y="100" width="600" height="300" visible="true">
+				<s:TextInput id ="ans1" x="49" y="84" width="233" text="Type selection 1"/>
+				<s:TextInput id ="ans2" x="49" y="113" width="233" text="Type selection 2"/>
+				<s:TextInput id ="ans3" x="49" y="143" width="233" text="Type selection 3"/>
+				<s:TextInput id ="ans4" x="49" y="173" width="233" text="Type selection 4"/>
+				<s:TextInput id ="ans5" x="49" y="203" width="233" text="Type selection 5"/>
+				<s:TextInput id="ques" x="49" y="36" width="497" height="25" fontSize="14"
+							 text="Type your question or description here"/>
+				<s:Button x="262" y="251" label="Start" click="init_vote()"/>
+			</s:BorderContainer>
+			<s:BorderContainer id="result" x="150" y="100" width="600" height="300" visible="false">
+				<s:Label id="ansR1" x="320" y="90" text="Label"/>
+				<s:Label id="ansR2" x="320" y="105" text="Label"/>
+				<s:Label id="ansR3" x="320" y="120" text="Label"/>
+				<s:Label id="ansR4" x="320" y="135" text="Label"/>
+				<s:Label id="ansR5" x="320" y="150" text="Label"/>
+				<s:Label id="queR" x="119" y="50" width="356" height="29" fontSize="14" text="Label"/>
+				<s:Label id="ansS1" x="120" y="90" width="150" text="Label"/>
+				<s:Label id="ansS2" x="120" y="105" width="150" text="Label"/>
+				<s:Label id="ansS3" x="120" y="120" width="150" text="Label"/>
+				<s:Label id="ansS4" x="120" y="135" width="150" text="Label"/>
+				<s:Label id="ansS5" x="120" y="150" width="150" text="Label"/>
+				<s:Button x="264" y="238" label="return" click="resetVote()"/>
+			</s:BorderContainer>
 		</s:NavigatorContent>
 	</mx:TabNavigator>
 </s:Application>
