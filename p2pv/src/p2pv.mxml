@@ -170,6 +170,10 @@
 						vidState = "Closed";
 						vidBut = "Start";
 					}
+					if(vidState=="Ready"){
+						vidState = "Closed";
+						vidBut = "Start";
+					}
 				}
 				else if(message.type=="VOTE_Q"){
 					if(votState == "Wait"){
