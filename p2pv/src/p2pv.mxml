@@ -240,6 +240,7 @@
 			
 			private function sendNow():void{
 				sendMessage(txtMessage.text);
+				txtMessage.text = "";
 			}
 			
 			private function takeVideo():void{
@@ -389,12 +390,12 @@
 			}
 			
 			private function resetVote():void{
-				ques.text = "Type your question or description here";
-				ans1.text = "Type selection 1";
-				ans2.text = "Type selection 2";
-				ans3.text = "Type selection 3";
-				ans4.text = "Type selection 4";
-				ans5.text = "Type selection 5";
+				ques.text = "";
+            			ans1.text = "";
+            			ans2.text = "";
+        			ans3.text = "";
+            			ans4.text = "";
+            			ans5.text = "";
 				ansta1 = 0;
 				ansta2 = 0;
 				ansta3 = 0;
@@ -438,13 +439,13 @@
 				<s:Label id="timerdisp" x="557" y="10" fontSize="20" text="{timerdec}"/>
 			</s:BorderContainer>
 			<s:BorderContainer  x="150" y="100" width="600" height="300" visible="{incVotevis}">
-				<s:TextInput id ="ans1" x="49" y="84" width="233" text="Type selection 1"/>
-				<s:TextInput id ="ans2" x="49" y="113" width="233" text="Type selection 2"/>
-				<s:TextInput id ="ans3" x="49" y="143" width="233" text="Type selection 3"/>
-				<s:TextInput id ="ans4" x="49" y="173" width="233" text="Type selection 4"/>
-				<s:TextInput id ="ans5" x="49" y="203" width="233" text="Type selection 5"/>
+				<s:TextInput id ="ans1" x="49" y="84" width="233" prompt="Type selection 1"/>
+				<s:TextInput id ="ans2" x="49" y="113" width="233" prompt="Type selection 2"/>
+				<s:TextInput id ="ans3" x="49" y="143" width="233" prompt="Type selection 3"/>
+				<s:TextInput id ="ans4" x="49" y="173" width="233" prompt="Type selection 4"/>
+				<s:TextInput id ="ans5" x="49" y="203" width="233" prompt="Type selection 5"/>
 				<s:TextInput id="ques" x="49" y="36" width="497" height="25" fontSize="14"
-							 text="Type your question or description here"/>
+							 prompt="Type your question or description here"/>
 				<s:Button x="262" y="251" label="Start" click="init_vote()"/>
 			</s:BorderContainer>
 			<s:BorderContainer  x="150" y="100" width="600" height="300" visible="{resultvis}">
