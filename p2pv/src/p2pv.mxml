@@ -17,10 +17,10 @@
 			import spark.components.Group;
 			
 			
-			//private const SERVER:String = "rtmfp://stratus.adobe.com/";
-			//private const DEVKEY:String = "481a9df7fad7b1a57b57ae7b-cf264f9fd8e6";
-			private const SERVER:String = "rtmfp:";
-			private const DEVKEY:String = "";
+			private const SERVER:String = "rtmfp://stratus.adobe.com/";
+			private const DEVKEY:String = "481a9df7fad7b1a57b57ae7b-cf264f9fd8e6";
+			//private const SERVER:String = "rtmfp:";
+			//private const DEVKEY:String = "";
 			
 			
 			[Bindable]
@@ -134,7 +134,7 @@
 				spec.postingEnabled = true;
 				spec.serverChannelEnabled = true;
 				
-				spec.addIPMulticastAddress("239.252.252.1:20000");
+				//spec.addIPMulticastAddress("239.252.252.1:20000");
 				
 				netGroup = new NetGroup(netConnection, spec.groupspecWithAuthorizations());
 				netGroup.addEventListener(NetStatusEvent.NET_STATUS, netStatus);
