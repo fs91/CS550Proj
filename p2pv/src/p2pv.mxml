@@ -17,10 +17,10 @@
 			import spark.components.Group;
 			
 			
-			private const SERVER:String = "rtmfp://stratus.adobe.com/";
-			private const DEVKEY:String = "481a9df7fad7b1a57b57ae7b-cf264f9fd8e6";
-			//private const SERVER:String = "rtmfp:";
-			//private const DEVKEY:String = "";
+			//private const SERVER:String = "rtmfp://stratus.adobe.com/";
+			//private const DEVKEY:String = "481a9df7fad7b1a57b57ae7b-cf264f9fd8e6";
+			private const SERVER:String = "rtmfp:";
+			private const DEVKEY:String = "";
 			
 			
 			[Bindable]
@@ -39,20 +39,34 @@
 			private var netGroup:NetGroup;
 			private var stream:NetStream;
 			
-			[Bindable]
 			private var ansta1:int = 0;
-			
-			[Bindable]
 			private var ansta2:int = 0;
-			
-			[Bindable]
 			private var ansta3:int = 0;
-			
-			[Bindable]
 			private var ansta4:int = 0;
+			private var ansta5:int = 0;
 			
 			[Bindable]
-			private var ansta5:int = 0;
+			private var quesV:String;
+			[Bindable]
+			private var btans1:String;
+			[Bindable]
+			private var btans2:String;
+			[Bindable]
+			private var btans3:String;
+			[Bindable]
+			private var btans4:String;
+			[Bindable]
+			private var btans5:String;
+			
+			[Bindable]
+			private var newVotevis:Boolean = false;
+			[Bindable]
+			private var resultvis:Boolean = false;
+			[Bindable]
+			private var incVotevis:Boolean = true;
+			
+			[Bindable]
+			private var votbutenb:Boolean = false;
 			
 			[Bindable]
 			private var vidState:String;
@@ -120,7 +134,7 @@
 				spec.postingEnabled = true;
 				spec.serverChannelEnabled = true;
 				
-				//spec.addIPMulticastAddress("239.252.252.1:20000");
+				spec.addIPMulticastAddress("239.252.252.1:20000");
 				
 				netGroup = new NetGroup(netConnection, spec.groupspecWithAuthorizations());
 				netGroup.addEventListener(NetStatusEvent.NET_STATUS, netStatus);
@@ -159,17 +173,17 @@
 				}
 				else if(message.type=="VOTE_Q"){
 					if(votState == "Wait"){
-						quesV.text = message.ques;
-						btans1.label = message.ans1;
-						btans2.label = message.ans2;
-						btans3.label = message.ans3;
-						btans4.label = message.ans4;
-						btans5.label = message.ans5;
+						quesV = message.ques;
+						btans1 = message.ans1;
+						btans2 = message.ans2;
+						btans3 = message.ans3;
+						btans4 = message.ans4;
+						btans5 = message.ans5;
 						votState = "Voting";
-						newVote.visible = true;
-						result.visible = false;
-						incVote.visible = false;
-						votbut.enabled = true;
+						newVotevis = true;
+						resultvis = false;
+						incVotevis = false;
+						votbutenb = true;
 						timerdec = 10;
 						timer.start();
 					}
@@ -196,6 +210,9 @@
 				else if(message.type=="VOTE_FINAL"){
 					if(votState == "Voting"){
 						votState = "Wait";
+						newVotevis = false;
+						resultvis = true;
+						incVotevis = false;
 						radiogroup2.selection = null;
 						timerdec = 0;
 						queR.text = message.ques;
@@ -209,9 +226,6 @@
 						ansR3.text = message.ans3sta;
 						ansR4.text = message.ans4sta;
 						ansR5.text = message.ans5sta;
-						newVote.visible = false;
-						result.visible = true;
-						incVote.visible = false;
 					}
 				}
 			}
@@ -329,17 +343,17 @@
 					message.select = radiogroup2.selectedValue;
 					netGroup.post(message);
 					receiveMessage(message);
-					votbut.enabled = false;
+					votbutenb = false;
 				}
 			}
 			
 			private function onTimer(e:TimerEvent):void 
 			{
-				if(timerdec>0){
+				if(timerdec > 0){
 					timerdec--;
 				}
 				else {
-					votbut.enabled = false;
+					votbutenb = false;
 				}
 				if(timerdec<=0 && manager){
 					pubVoteResult();
@@ -380,9 +394,9 @@
 				ansta3 = 0;
 				ansta4 = 0;
 				ansta5 = 0;
-				newVote.visible = false;
-				result.visible = false;
-				incVote.visible = true;
+				newVotevis = false;
+				resultvis = false;
+				incVotevis = true;
 			}
 			
 		]]>
@@ -405,19 +419,19 @@
 			<s:Label x="18" y="60" text="{vidState}"/>
 		</s:NavigatorContent>
 		<s:NavigatorContent width="100%" height="100%" label="Voting">
-			<s:BorderContainer id="newVote" x="150" y="100" width="600" height="300" visible="false">
+			<s:BorderContainer x="150" y="100" width="600" height="300" visible="{newVotevis}">
 				<s:VGroup x="238" y="92" width="122" height="115">
-					<s:RadioButton id="btans1" label="Button 1" groupName="radiogroup2"/>
-					<s:RadioButton id="btans2" label="Button 2" groupName="radiogroup2"/>
-					<s:RadioButton id="btans3" label="Button 3" groupName="radiogroup2"/>
-					<s:RadioButton id="btans4" label="Button 4" groupName="radiogroup2"/>
-					<s:RadioButton id="btans5" label="Button 5" groupName="radiogroup2"/>
+					<s:RadioButton label="{btans1}" groupName="radiogroup2"/>
+					<s:RadioButton label="{btans2}" groupName="radiogroup2"/>
+					<s:RadioButton label="{btans3}" groupName="radiogroup2"/>
+					<s:RadioButton label="{btans4}" groupName="radiogroup2"/>
+					<s:RadioButton label="{btans5}" groupName="radiogroup2"/>
 				</s:VGroup>
-				<s:Label id="quesV" x="169" y="44" width="260" height="36" fontSize="14" text="Label"/>
-				<s:Button id="votbut" x="264" y="243" label="Vote" click="send_vote()"/>
+				<s:Label x="169" y="44" width="260" height="36" fontSize="14" text="{quesV}"/>
+				<s:Button x="264" y="243" label="Vote" click="send_vote()" enabled="{votbutenb}"/>
 				<s:Label id="timerdisp" x="557" y="10" fontSize="20" text="{timerdec}"/>
 			</s:BorderContainer>
-			<s:BorderContainer id="incVote" x="150" y="100" width="600" height="300" visible="true">
+			<s:BorderContainer  x="150" y="100" width="600" height="300" visible="{incVotevis}">
 				<s:TextInput id ="ans1" x="49" y="84" width="233" text="Type selection 1"/>
 				<s:TextInput id ="ans2" x="49" y="113" width="233" text="Type selection 2"/>
 				<s:TextInput id ="ans3" x="49" y="143" width="233" text="Type selection 3"/>
@@ -427,8 +441,8 @@
 							 text="Type your question or description here"/>
 				<s:Button x="262" y="251" label="Start" click="init_vote()"/>
 			</s:BorderContainer>
-			<s:BorderContainer id="result" x="150" y="100" width="600" height="300" visible="false">
-				<s:Label id="ansR1" x="320" y="90" text="Label"/>
+			<s:BorderContainer  x="150" y="100" width="600" height="300" visible="{resultvis}">
+				<s:Label id="ansR1" x="320" y="90" text="{ansR1}"/>
 				<s:Label id="ansR2" x="320" y="105" text="Label"/>
 				<s:Label id="ansR3" x="320" y="120" text="Label"/>
 				<s:Label id="ansR4" x="320" y="135" text="Label"/>
